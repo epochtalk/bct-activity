@@ -12,6 +12,10 @@
     "bitcointalk",
     "activity"
   ],
-  "author": "Anthony Kinsey <anthonyjk@gmail.com> (http://github.com/akinsey)",
-  "license": "ISC"
+  "author": "Anthony Kinsey",
+  "license": "ISC",
+  "dependencies": {
+    "bluebird": "^3.3.1",
+    "epochtalk-core-pg": "epochtalk/core-pg"
+  }
 }
