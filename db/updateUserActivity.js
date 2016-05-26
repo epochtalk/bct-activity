@@ -6,46 +6,54 @@ var helper = dbc.helper;
 module.exports = function(userId) {
   userId = helper.deslugify(userId);
   var q = 'SELECT created_at as registered_at, user_id, current_period_start, current_period_offset, remaining_period_activity, total_activity FROM users LEFT JOIN user_activity ON user_id = id WHERE id = $1';
-  var info;
-  var hasPrevActivity;
+  var info; // Will hold updated activity info to store back into db
+  var hasPrevActivity; // boolean indicating if preexisting activity exists
   return db.scalar(q, [userId])
   .then(function(activityInfo) {
     info = activityInfo;
 
+    // If user has a start period they have preexisting activity info
     hasPrevActivity = !!info.current_period_start;
-    // Current period start doesn't exist, user has no previous activity
-    if (!info.current_period_start) {
+
+    // User has no previous activity, populate initial activity info
+    if (!hasPrevActivity) {
       info.current_period_start = new Date(activityInfo.registered_at);
       info.current_period_offset = new Date(activityInfo.registered_at);
       info.user_id = userId;
     }
 
-    // Check if the 2 week period has passed
+    // Initiate vars for calculating period info
     var periodDays = 14;
     var periodEnd = new Date(info.current_period_start.getTime() + (periodDays * 24 * 60 * 60 * 1000));
     var now = new Date();
     var postsInPeriod = 0;
 
+    // Check if the 2 week period has passed
     if (now > periodEnd) {
       info.current_period_start = now;
       info.current_period_offset = now;
-      info.remaining_period_activity = periodDays;
+      info.remaining_period_activity = periodDays; // 1 point per day
+
+      // Update Period End for the query below
       periodEnd = new Date(info.current_period_start.getTime() + (periodDays * 24 * 60 * 60 * 1000));
       // Takes into account current post
       postsInPeriod = 1;
     }
 
-    // Check that there is remaining period activity
-    if (info.remaining_period_activity === 0) { return; }
+    // No activity remaining in this 2 week period
+    if (info.remaining_period_activity <= 0) { return; }
+    // Add post count between offset and period end to total activity
     else {
       q = 'SELECT COUNT(id) FROM posts WHERE user_id = $1 AND created_at >= $2 AND created_at <= $3';
       return db.scalar(q, [userId, info.current_period_offset, periodEnd])
       .then(function(postInfo) { postsInPeriod = postsInPeriod === 0 ? postInfo.count : postsInPeriod; })
       .then(function() {
+        // There are more posts than activity remaining
         if (postsInPeriod >= info.remaining_period_activity) {
           info.total_activity = Number(info.total_activity) + Number(info.remaining_period_activity);
           info.remaining_period_activity = 0;
         }
+        // There is still activity remaining
         else {
           info.total_activity = Number(info.total_activity) + Number(postsInPeriod);
           info.remaining_period_activity = Number(info.remaining_period_activity) - Number(postsInPeriod);
