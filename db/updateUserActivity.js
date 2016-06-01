@@ -8,10 +8,11 @@ module.exports = function(userId) {
   var q = 'SELECT created_at as registered_at, user_id, current_period_start, current_period_offset, remaining_period_activity, total_activity FROM users LEFT JOIN user_activity ON user_id = id WHERE id = $1';
   var info; // Will hold updated activity info to store back into db
   var hasPrevActivity; // boolean indicating if preexisting activity exists
+  var oldActivity;
   return db.scalar(q, [userId])
   .then(function(activityInfo) {
     info = activityInfo;
-
+    oldActivity = activityInfo.total_activity;
     // If user has a start period they have preexisting activity info
     hasPrevActivity = !!info.current_period_start;
 
@@ -20,6 +21,7 @@ module.exports = function(userId) {
       info.current_period_start = new Date(activityInfo.registered_at);
       info.current_period_offset = new Date(activityInfo.registered_at);
       info.user_id = userId;
+      info.remaining_period_activity = 14;
     }
 
     // Initiate vars for calculating period info
@@ -39,7 +41,6 @@ module.exports = function(userId) {
       // Takes into account current post
       postsInPeriod = 1;
     }
-
     // No activity remaining in this 2 week period
     if (info.remaining_period_activity <= 0) { return; }
     // Add post count between offset and period end to total activity
@@ -67,6 +68,13 @@ module.exports = function(userId) {
           q = 'UPDATE user_activity SET current_period_start = $2, current_period_offset = now(), remaining_period_activity = $3, total_activity = $4 WHERE user_id = $1';
         }
         return db.sqlQuery(q, params);
+      })
+      .then(function() {
+        var activity = {
+          old_activity: oldActivity,
+          updated_activity: info.total_activity
+        };
+        return activity;
       });
     }
   });
