@@ -1,6 +1,15 @@
 var Promise = require('bluebird');
 
 function userActivity(request) {
+  var user = request.pre.processed;
+  return request.db.userActivity.userActivity(user.id)
+  .then(function(activity) {
+    user.activity = activity;
+    return user;
+  });
+}
+
+function userPostActivity(request) {
   return Promise.map(request.pre.processed.posts, function(post) {
     return request.db.userActivity.userActivity(post.user.id)
     .then(function(activity) {
@@ -33,6 +42,7 @@ function updateUserActivity(request) {
 }
 
 module.exports = [
-  { path: 'posts.byThread.post', method: userActivity },
+  { path: 'users.find.post', method: userActivity },
+  { path: 'posts.byThread.post', method: userPostActivity },
   { path: 'posts.create.post', method: updateUserActivity }
 ];
