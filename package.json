@@ -1,6 +1,6 @@
 {
   "name": "bct-activity",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "Bitcoin talk activity plugin for epochtalk forum",
   "main": "index.js",
   "scripts": {
