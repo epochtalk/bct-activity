@@ -14,7 +14,7 @@
   ],
   "author": "Anthony Kinsey",
   "license": "ISC",
-  "dependencies": {
+  "devDependencies": {
     "bluebird": "^3.3.1",
     "epochtalk-core-pg": "epochtalk/core-pg"
   }
